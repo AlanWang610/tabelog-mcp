@@ -2,6 +2,8 @@
 
 A Model Context Protocol (MCP) server that scrapes restaurant data from Tabelog using Playwright and TypeScript.
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 ## Features
 
 - Scrape top-rated restaurants from Tabelog
@@ -150,3 +152,7 @@ src/
 - Rate limiting and respectful scraping practices are implemented
 - Follows MCP server guidelines with streamable HTTP transport
 - TypeScript-based implementation for better type safety and maintainability
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
