@@ -10,6 +10,7 @@ A Model Context Protocol (MCP) server that scrapes restaurant data from Tabelog 
 - Support for different regions (Kyoto, Tokyo, Osaka, etc.)
 - Take snapshots of Tabelog pages
 - Extract restaurant names, ratings, URLs, cuisine types, prices, and locations
+- Price filtering by dinner price range (in JPY)
 - Streamable HTTP transport for production deployment
 - STDIO transport for local development
 
@@ -66,13 +67,36 @@ Get top-rated restaurants from Tabelog for a specific region.
 
 **Parameters:**
 - `region` (string): Region slug (e.g., 'kyoto', 'tokyo', 'osaka'). Default: 'kyoto'
-- `limit` (integer): Number of restaurants to return (1-50). Default: 10
+- `limit` (integer): Number of restaurants to return (1-20). Default: 10
+- `priceRange` (object, optional): Price filtering by dinner price range
+  - `min` (integer): Minimum dinner price in JPY
+  - `max` (integer): Maximum dinner price in JPY
 
-**Example:**
+**Examples:**
 ```json
+// Basic usage
 {
   "region": "kyoto",
   "limit": 10
+}
+
+// With price filtering
+{
+  "region": "kyoto",
+  "limit": 20,
+  "priceRange": {
+    "min": 30000,
+    "max": 50000
+  }
+}
+
+// High-end restaurants only
+{
+  "region": "kyoto",
+  "limit": 10,
+  "priceRange": {
+    "min": 50000
+  }
 }
 ```
 
@@ -88,11 +112,15 @@ Take a snapshot of the Tabelog page for a specific region.
    - Tool: `tabelog_top`
    - Parameters: `{"region": "kyoto", "limit": 10}`
 
-2. Get top 5 restaurants in Tokyo:
+2. Get top 20 restaurants in Kyoto with price filtering:
    - Tool: `tabelog_top`
-   - Parameters: `{"region": "tokyo", "limit": 5}`
+   - Parameters: `{"region": "kyoto", "limit": 20, "priceRange": {"min": 30000, "max": 50000}}`
 
-3. Take a snapshot of Osaka restaurants page:
+3. Get high-end restaurants (50,000+ JPY) in Tokyo:
+   - Tool: `tabelog_top`
+   - Parameters: `{"region": "tokyo", "limit": 10, "priceRange": {"min": 50000}}`
+
+4. Take a snapshot of Osaka restaurants page:
    - Tool: `tabelog_snapshot`
    - Parameters: `{"region": "osaka"}`
 
@@ -148,6 +176,8 @@ src/
 
 - The server uses Playwright with Chromium in headless mode
 - Restaurant data is sorted by rating (highest first) using Tabelog's `SrtT=rt` parameter
+- Price filtering works by both URL parameters and client-side filtering for reliability
+- Maximum 20 restaurants per page (as per Tabelog pagination)
 - The scraper uses robust selectors to avoid brittle class names
 - Rate limiting and respectful scraping practices are implemented
 - Follows MCP server guidelines with streamable HTTP transport

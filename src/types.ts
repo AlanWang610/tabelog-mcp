@@ -1,9 +1,18 @@
 /**
+ * Price range options for filtering
+ */
+export interface PriceRange {
+    min?: number;
+    max?: number;
+}
+
+/**
  * Arguments for tabelog_top tool
  */
 export interface TabelogTopArgs {
     region?: string;
     limit?: number;
+    priceRange?: PriceRange;
 }
 
 /**

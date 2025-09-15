@@ -1,5 +1,5 @@
 import { chromium, Browser, Page } from 'playwright';
-import { Restaurant, TabelogResponse } from './types.js';
+import { Restaurant, TabelogResponse, PriceRange } from './types.js';
 
 export class TabelogClient {
     private browser: Browser | null = null;
@@ -23,7 +23,7 @@ export class TabelogClient {
     /**
      * Scrape restaurant data from Tabelog
      */
-    async scrapeRestaurants(region: string = "kyoto", limit: number = 10): Promise<TabelogResponse> {
+    async scrapeRestaurants(region: string = "kyoto", limit: number = 10, priceRange?: PriceRange): Promise<TabelogResponse> {
         if (!this.browser) {
             await this.initialize();
         }
@@ -36,7 +36,22 @@ export class TabelogClient {
         });
         
         // Navigate to Tabelog with highest rated restaurants
-        const url = `https://tabelog.com/en/${region}/rstLst/RC/?SrtT=rt`;
+        let url = `https://tabelog.com/en/${region}/rstLst/RC/?SrtT=rt`;
+        
+        // Add price filtering parameters if specified
+        if (priceRange) {
+            const params = new URLSearchParams();
+            if (priceRange.min !== undefined) {
+                params.append('PRICE_MIN', priceRange.min.toString());
+            }
+            if (priceRange.max !== undefined) {
+                params.append('PRICE_MAX', priceRange.max.toString());
+            }
+            if (params.toString()) {
+                url += `&${params.toString()}`;
+            }
+        }
+        
         await page.goto(url, { waitUntil: 'networkidle' });
         
         // Wait for restaurant list to load
@@ -112,7 +127,12 @@ export class TabelogClient {
                     rank: i + 1
                 };
                 
-                restaurants.push(restaurant);
+                // Apply client-side price filtering if specified
+                if (priceRange && this.matchesPriceFilter(restaurant.price, priceRange)) {
+                    restaurants.push(restaurant);
+                } else if (!priceRange) {
+                    restaurants.push(restaurant);
+                }
                 
             } catch (error) {
                 console.error(`Error extracting restaurant ${i+1}:`, error);
@@ -127,6 +147,34 @@ export class TabelogClient {
             count: restaurants.length,
             restaurants
         };
+    }
+
+    /**
+     * Check if restaurant price matches the price filter
+     */
+    private matchesPriceFilter(priceString: string, priceRange: PriceRange): boolean {
+        if (!priceString || priceString === "N/A") {
+            return false;
+        }
+
+        // Extract dinner price from price string (first price range)
+        const dinnerPriceMatch = priceString.match(/JPY\s*([0-9,]+)\s*-\s*JPY\s*([0-9,]+)/);
+        if (!dinnerPriceMatch) {
+            return false;
+        }
+
+        const minPrice = parseInt(dinnerPriceMatch[1].replace(/,/g, ''));
+        const maxPrice = parseInt(dinnerPriceMatch[2].replace(/,/g, ''));
+
+        // Check if price range overlaps with filter
+        if (priceRange.min !== undefined && maxPrice < priceRange.min) {
+            return false;
+        }
+        if (priceRange.max !== undefined && minPrice > priceRange.max) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

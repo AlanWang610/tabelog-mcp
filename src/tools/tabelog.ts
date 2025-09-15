@@ -7,7 +7,7 @@ import { TabelogTopArgs, TabelogSnapshotArgs } from '../types.js';
  */
 export const tabelogTopToolDefinition: Tool = {
     name: "tabelog_top",
-    description: "Get top-rated restaurants from Tabelog for a specific region",
+    description: "Get top-rated restaurants from Tabelog for a specific region with optional price filtering",
     inputSchema: {
         type: "object",
         properties: {
@@ -18,10 +18,26 @@ export const tabelogTopToolDefinition: Tool = {
             },
             limit: {
                 type: "integer",
-                description: "Number of restaurants to return (max 50)",
+                description: "Number of restaurants to return (max 20 per page)",
                 default: 10,
                 minimum: 1,
-                maximum: 50
+                maximum: 20
+            },
+            priceRange: {
+                type: "object",
+                description: "Price range filter for dinner prices (in JPY)",
+                properties: {
+                    min: {
+                        type: "integer",
+                        description: "Minimum dinner price in JPY",
+                        minimum: 0
+                    },
+                    max: {
+                        type: "integer", 
+                        description: "Maximum dinner price in JPY",
+                        minimum: 0
+                    }
+                }
             }
         },
         required: []
@@ -54,8 +70,9 @@ function isTabelogTopArgs(args: unknown): args is TabelogTopArgs {
     return (
         typeof args === "object" &&
         args !== null &&
-        (args as any).region === undefined || typeof (args as any).region === "string" &&
-        (args as any).limit === undefined || typeof (args as any).limit === "number"
+        ((args as any).region === undefined || typeof (args as any).region === "string") &&
+        ((args as any).limit === undefined || typeof (args as any).limit === "number") &&
+        ((args as any).priceRange === undefined || typeof (args as any).priceRange === "object")
     );
 }
 
@@ -87,9 +104,10 @@ export async function handleTabelogTopTool(
         }
 
         const region = args.region || "kyoto";
-        const limit = Math.min(args.limit || 10, 50); // Cap at 50
+        const limit = Math.min(args.limit || 10, 20); // Cap at 20 per page
+        const priceRange = args.priceRange;
 
-        const result = await client.scrapeRestaurants(region, limit);
+        const result = await client.scrapeRestaurants(region, limit, priceRange);
         
         return {
             content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
